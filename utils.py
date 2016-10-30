@@ -23,13 +23,6 @@ def roll_dice(n_rolls, n_dice=2):
     return [roll_once(n_dice) for _ in range(n_rolls)]
 
 
-# def sim_make_cdf(settlements=[2, 3, 6], n_sim=1000, n_rolls=60, n_dice=2):
-#     simrolls = [collections.Counter(roll_dice(n_rolls)) for sim in range(n_sim)]
-#     return collections.Counter(map(lambda x: x[12] + x[3] + x[3] + x[6] + x[5], simrolls))
-#
-# sim_make_cdf()
-
-
 class Rolls(object):
 
     def __init__(self):
@@ -137,6 +130,11 @@ class Player(Rolls):
         pb = PoiBin(rolls_p)
         return pb.cdf(resources)
 
+    def get_percentile_from_resources_gaussian(self, resources=None, k=1):
+        resources = self.resources_count() if resources is None else resources
+        expected = self.expected_resources_count()
+        return scipy.stats.norm.cdf(resources, loc=expected, scale=k*(expected**(0.5)))
+
     def get_rolls_probability_test(self):
         return self.get_rolls_probability()
 
@@ -144,9 +142,7 @@ class Player(Rolls):
         print(self.resources_at_percentile(0.1))
         print(self.resources_at_percentile(0.5))
         print(self.resources_at_percentile(0.9))
-
         print(self.make_cdf())
-
         print(self.get_percentile_from_resources())
 
 

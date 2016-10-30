@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 ###############################################################
 
 # simulate a bunch of rolls
-ngames = 500
-nrolls = 60
+ngames = 300
+nrolls = 10
 agg = []
-cdf_method = 'pb sss'
+cdf_method = 'pb' # 'pb', 'gaussian' or 'binomial'
 for sim in range(ngames):
     simrolls = Rolls()
     gsim = Game({'simp1': Player(simrolls)})
@@ -25,7 +25,10 @@ for sim in range(ngames):
     if cdf_method == 'pb':
         lowerbound = 0 if resources_count == 0 else gsim.players['simp1'].get_percentile_from_resources_poibin(resources_count - 1)
         agg.append(random.uniform(lowerbound, gsim.players['simp1'].get_percentile_from_resources_poibin(resources_count)))
-    else:
+    elif cdf_method == 'gaussian':
+        lowerbound = 0 if resources_count == 0 else gsim.players['simp1'].get_percentile_from_resources_gaussian(resources_count - 1)
+        agg.append(random.uniform(lowerbound, gsim.players['simp1'].get_percentile_from_resources_gaussian(resources_count)))
+    elif cdf_method == 'binomial':
         try:
             pctile = gsim.players['simp1'].get_percentile_from_resources(resources_count)
             lowerbound = 0 if resources_count == 0 else pctile[0]
@@ -33,7 +36,6 @@ for sim in range(ngames):
         except:
             print("game {} failed".format(sim))
             raise
-
     print('simulated game: {}'.format(sim))
 
 # percentiles should be uniform
