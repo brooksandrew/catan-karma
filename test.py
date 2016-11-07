@@ -1,4 +1,4 @@
-#from utils import Player, Rolls, Game
+from utils import Player, Rolls, Game
 
 
 # instantiate Players and Game
@@ -17,6 +17,17 @@ g1.add_roll(6)
 g1.add_roll(5)
 g1.add_roll(11)
 g1.add_roll(6)
+
+# add another settlement
+g1.players['p1'].add_settlements([8,9,10])
+
+# roll some more dice
+g1.add_roll(8)
+g1.add_roll(10)
+
+# check that percentile functions work
+g1.players['p1'].get_percentile_from_resources_exact(2)
+g1.players['p1'].get_percentile_from_resources_poibin(2)
 
 # check that each players rolls are incremented up
 print(g1.players['p1'].settlements)

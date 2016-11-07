@@ -1,4 +1,4 @@
-from utils import Player, Rolls, Game, roll_dice
+from utils import Player, Rolls, Game, roll_dice, checkSimulatedQuantiles
 import random
 import numpy as np
 import pandas as pd
@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 ###############################################################
 
 # simulate a bunch of rolls
-ngames = 300
-nrolls = 10
+ngames = 1000
+nrolls = 50
 agg = []
-cdf_method = 'pb' # 'pb', 'gaussian' or 'binomial'
+cdf_method = 'pb' # 'pb', 'gaussian', 'exact' or 'binomial'
 for sim in range(ngames):
     simrolls = Rolls()
     gsim = Game({'simp1': Player(simrolls)})
@@ -36,6 +36,9 @@ for sim in range(ngames):
         except:
             print("game {} failed".format(sim))
             raise
+    elif cdf_method == 'exact':
+        lowerbound = 0 if resources_count == 0 else gsim.players['simp1'].get_percentile_from_resources_exact(resources_count - 1)
+        agg.append(random.uniform(lowerbound, gsim.players['simp1'].get_percentile_from_resources_exact(resources_count)))
     print('simulated game: {}'.format(sim))
 
 # percentiles should be uniform
@@ -49,7 +52,19 @@ plt.scatter(range(len(agg)), agg)
 df = pd.DataFrame(agg)
 df.quantile(np.arange(0, 1, 0.05))
 
+# check accuracy numerically:
+checkSimulatedQuantiles(agg)
+
+# summaries
 print(gsim.players['simp1'].resources_count())
+print(gsim.players['simp1'].expected_resources_count())
 print(gsim.players['simp1'].get_performance_summary())
+
+# checking resources at percentile
+print(gsim.players['simp1'].resources_at_percentile(0.9))
+print(gsim.players['simp1'].resources_at_percentile_gaussian(0.9))
+
+# TODO:
+#print(gsim.players['simp1'].resources_at_percentile_poibin(0.9))
 
 

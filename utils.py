@@ -1,4 +1,5 @@
 import scipy.stats
+import pandas as pd
 import random
 import numpy as np
 from bisect import bisect
@@ -7,6 +8,7 @@ import collections
 
 
 def convert_roll_to_prob(roll):
+    """Calculate probability of each roll"""
     if 2 <= roll <= 7 :
         return (roll - 1) / 36
     elif 7 < roll <= 12:
@@ -23,19 +25,34 @@ def roll_dice(n_rolls, n_dice=2):
     return [roll_once(n_dice) for _ in range(n_rolls)]
 
 
+def checkSimulatedQuantiles(quantiles, step=0.01):
+    """ Check how uniform the sampled quantiles are"""
+    df = pd.DataFrame(quantiles)
+    qindex = np.arange(0, 1, step)
+    dev = df.quantile(qindex).as_matrix().flatten() - qindex
+    print('average error {}'.format(np.mean(dev)))
+    print('median error {}'.format(np.median(dev)))
+    print('median abs error {}'.format(np.mean(abs(dev))))
+    return [np.mean(dev), np.median(dev), np.mean(abs(dev))]
+
+
 class Rolls(object):
 
+    @classmethod
     def __init__(self):
         self.rolls = []
 
+    @classmethod
     def add_roll_to_list(self, roll):
         """add roll to list"""
         return self.rolls.append(roll)
 
+    @classmethod
     def get_roll_history(self):
         """return history of rolls thus far"""
         return self.rolls
 
+    @classmethod
     def print_get_roll_history(self):
         """print roll history in pretty format"""
         turn_roll = list(zip(range(len(self.rolls)), self.rolls))
@@ -91,6 +108,14 @@ class Player(Rolls):
                                          )
                    )
 
+    def resources_at_percentile_gaussian(self, percentile, k=1):
+        expected = self.expected_resources_count()
+        return scipy.stats.norm.ppf(percentile,
+                                    loc=expected,
+                                    scale=k*(expected**0.5)
+                                    )
+
+
     def make_cdf(self, step=0.01):
         """
         creates mapping for percentile => # of resources expected at that percentile
@@ -131,9 +156,40 @@ class Player(Rolls):
         return pb.cdf(resources)
 
     def get_percentile_from_resources_gaussian(self, resources=None, k=1):
+        """
+        Use Gaussian approximation to calculate percentile given resources
+        """
         resources = self.resources_count() if resources is None else resources
         expected = self.expected_resources_count()
-        return scipy.stats.norm.cdf(resources, loc=expected, scale=k*(expected**(0.5)))
+        return scipy.stats.norm.cdf(resources, loc=expected, scale=k*(expected**0.5))
+
+    def get_percentile_from_resources_exact(self, resources=None):
+        """
+        Use exact CDF creation to calculate percentile given resources
+        """
+
+        def get_length_of_cdf():
+            """Calculate how many elements to make CDF (depends on number of rolls and which settlements occupied"""
+            settlements_agg = collections.defaultdict(int)
+            for r, s in self.settlements: settlements_agg[s] += r
+            max_resources = settlements_agg[max(settlements_agg, key=settlements_agg.get)]
+            len_cdf = max(1, max_resources) * len(Rolls.get_roll_history())
+            return len_cdf
+
+        resources = self.resources_count() if resources is None else resources
+        len_cdf = get_length_of_cdf()
+        pmf = np.zeros(len_cdf)
+        pmf[0] = 1
+        turns = len(self.get_roll_history())
+        settprob = [(range(turns-i[0], turns), i[1]) for i in self.settlements_prob()]
+
+        for i in range(turns):
+            for s in settprob:
+                if i in s[0]:
+                    pmf = np.roll(pmf, 1)*s[1] + pmf*(1-s[1])
+
+        return np.cumsum(pmf)[resources]
+
 
     def get_rolls_probability_test(self):
         return self.get_rolls_probability()
