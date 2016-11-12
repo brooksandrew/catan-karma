@@ -3,21 +3,30 @@ import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import random
+import statsmodels.api as sm
+import scipy
 
 ###############################################################
 # Let's run a simulation to make sure our statistics are good #
 ###############################################################
 
 # simulate a bunch of rolls
-ngames = 1000
-nrolls = 50
+ngames = 500
+nrolls_max = 50
 agg = []
-cdf_method = 'pb' # 'pb', 'gaussian', 'exact' or 'binomial'
+cdf_method = 'exact' # 'pb', 'gaussian', 'exact' or 'binomial'
 for sim in range(ngames):
     simrolls = Rolls()
     gsim = Game({'simp1': Player(simrolls)})
-    gsim.players['simp1'].add_settlements([2, 3, 6])
+
     gsim.players['simp1'].add_settlements([5, 3, 11])
+    gsim.players['simp1'].add_settlements([5, 3, 11])
+    gsim.players['simp1'].add_settlements([5, 3, 11])
+    gsim.players['simp1'].add_settlements([5, 3, 11])
+    gsim.players['simp1'].add_settlements([5, 3, 11])
+    gsim.players['simp1'].add_settlements([2, 3, 6])
+    nrolls = random.randint(1, nrolls_max)
     for roll in roll_dice(nrolls):
         gsim.add_roll(roll)
 
@@ -48,12 +57,19 @@ plt.hist(agg, bins=15)
 agg.sort()
 plt.scatter(range(len(agg)), agg)
 
+# qqplot... smarter plot from one above
+sm.qqplot(np.asarray(agg), dist=scipy.stats.distributions.uniform, line='45')
+
 # checking a few quantiles
 df = pd.DataFrame(agg)
 df.quantile(np.arange(0, 1, 0.05))
 
 # check accuracy numerically:
 checkSimulatedQuantiles(agg)
+
+# check uniformity with KS test:
+# TODO: figure out why this blows up at ~980-1000 obs.. p-value becomes jumps to insignificant
+scipy.stats.kstest(agg, 'uniform')
 
 # summaries
 print(gsim.players['simp1'].resources_count())

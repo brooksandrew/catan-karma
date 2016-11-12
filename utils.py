@@ -115,7 +115,6 @@ class Player(Rolls):
                                     scale=k*(expected**0.5)
                                     )
 
-
     def make_cdf(self, step=0.01):
         """
         creates mapping for percentile => # of resources expected at that percentile
@@ -152,6 +151,7 @@ class Player(Rolls):
         """
         resources = self.resources_count() if resources is None else resources
         rolls_p = [val for sublist in [x[0] * [x[1]] for x in self.settlements_prob()] for val in sublist]
+        print(rolls_p)
         pb = PoiBin(rolls_p)
         return pb.cdf(resources)
 
@@ -175,6 +175,7 @@ class Player(Rolls):
             max_resources = settlements_agg[max(settlements_agg, key=settlements_agg.get)]
             len_cdf = max(1, max_resources) * len(Rolls.get_roll_history())
             return len_cdf
+
 
         resources = self.resources_count() if resources is None else resources
         len_cdf = get_length_of_cdf()
