@@ -5,7 +5,7 @@ import numpy as np
 from bisect import bisect
 from poibin.poibin import PoiBin
 import collections
-
+import itertools
 
 def convert_roll_to_prob(roll):
     """Calculate probability of each roll"""
@@ -151,7 +151,6 @@ class Player(Rolls):
         """
         resources = self.resources_count() if resources is None else resources
         rolls_p = [val for sublist in [x[0] * [x[1]] for x in self.settlements_prob()] for val in sublist]
-        print(rolls_p)
         pb = PoiBin(rolls_p)
         return pb.cdf(resources)
 
@@ -162,6 +161,7 @@ class Player(Rolls):
         resources = self.resources_count() if resources is None else resources
         expected = self.expected_resources_count()
         return scipy.stats.norm.cdf(resources, loc=expected, scale=k*(expected**0.5))
+
 
     def get_percentile_from_resources_exact(self, resources=None):
         """
@@ -176,18 +176,24 @@ class Player(Rolls):
             len_cdf = max(1, max_resources) * len(Rolls.get_roll_history())
             return len_cdf
 
-
         resources = self.resources_count() if resources is None else resources
         len_cdf = get_length_of_cdf()
-        pmf = np.zeros(len_cdf)
+        pmf = np.zeros(len_cdf*4) # temporary hack... needs to update length when new settlements get added
         pmf[0] = 1
         turns = len(self.get_roll_history())
-        settprob = [(range(turns-i[0], turns), i[1]) for i in self.settlements_prob()]
+
+        settprob = [(range(turns-i[0], turns), i[1]) for i in self.settlements]
+        settprob.sort(key=lambda tup: tup[1])
+        aggsett_range = [(key, list(v for v, k in group)) for key, group in itertools.groupby(settprob, key=lambda x: x[1])]
+        aggsett = list(map(lambda x: (x[0], collections.Counter(list(itertools.chain(*x[1])))), aggsett_range))
+        list(map(lambda x: (x[0], x[1][4]), aggsett))
 
         for i in range(turns):
-            for s in settprob:
-                if i in s[0]:
-                    pmf = np.roll(pmf, 1)*s[1] + pmf*(1-s[1])
+            isett = list(map(lambda x: (convert_roll_to_prob(x[0]), x[1][i]), aggsett))
+            isett.sort(key=lambda tup: tup[1])
+            isettagg = [(key, sum(v for v, k in group)) for key, group in itertools.groupby(isett, key=lambda x: x[1])]
+            isettagg.append((0, 1 - sum([x[1] for x in isettagg])))
+            pmf = sum([np.roll(pmf, j[0])*j[1] for j in isettagg])
 
         return np.cumsum(pmf)[resources]
 

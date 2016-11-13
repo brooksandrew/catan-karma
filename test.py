@@ -85,5 +85,3 @@ g1.players['p2'].get_percentile_from_resources()
 # given current resources, what percentile am i in ... using the poisson binomial?
 g1.players['p1'].get_percentile_from_resources_poibin()
 
-
-

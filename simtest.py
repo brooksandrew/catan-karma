@@ -12,7 +12,7 @@ import scipy
 ###############################################################
 
 # simulate a bunch of rolls
-ngames = 500
+ngames = 10000
 nrolls_max = 50
 agg = []
 cdf_method = 'exact' # 'pb', 'gaussian', 'exact' or 'binomial'
@@ -23,11 +23,19 @@ for sim in range(ngames):
     gsim.players['simp1'].add_settlements([5, 3, 11])
     gsim.players['simp1'].add_settlements([5, 3, 11])
     gsim.players['simp1'].add_settlements([5, 3, 11])
-    gsim.players['simp1'].add_settlements([5, 3, 11])
-    gsim.players['simp1'].add_settlements([5, 3, 11])
-    gsim.players['simp1'].add_settlements([2, 3, 6])
+
+    #gsim.players['simp1'].add_settlements([2, 3, 6])
     nrolls = random.randint(1, nrolls_max)
     for roll in roll_dice(nrolls):
+        if roll==4:
+            gsim.players['simp1'].add_settlements([5, 3, 11])
+            gsim.players['simp1'].add_settlements([5, 3, 11])
+            gsim.players['simp1'].add_settlements([5, 3, 11])
+        if roll == 8:
+            gsim.players['simp1'].add_settlements([5, 3, 11])
+            gsim.players['simp1'].add_settlements([5, 3, 11])
+            gsim.players['simp1'].add_settlements([5, 3, 11])
+
         gsim.add_roll(roll)
 
     resources_count = gsim.players['simp1'].resources_count()
@@ -52,10 +60,6 @@ for sim in range(ngames):
 
 # percentiles should be uniform
 plt.hist(agg, bins=15)
-
-# should be 45 degree line
-agg.sort()
-plt.scatter(range(len(agg)), agg)
 
 # qqplot... smarter plot from one above
 sm.qqplot(np.asarray(agg), dist=scipy.stats.distributions.uniform, line='45')
