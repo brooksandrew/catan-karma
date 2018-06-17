@@ -1,5 +1,12 @@
 """
 Run the application
+
+
+Make POST request to test:
+```
+curl -H 'Content-Type: application/json' -X POST -d '{"foo":"more_foo"}' http://127.0.0.1:5000/catan-spectator/instruction_text -v
+```
+
 """
 
 import subprocess
@@ -51,15 +58,17 @@ class UnexpectedEndOfStream(Exception):
 
 def catan_spectator_listener(stream_reader):
     while True:
-        time.sleep(0.5)
+        # time.sleep(0.1)
         output = stream_reader.readline()
         if not output:
             pass
         else:
             print('now!!!', datetime.now(), output)
-            # requests.put('http://localhost:5000/catan-spectator/instruction_text', json=jsonify({'ok': output}))
             headers = {"content-type": "application/json"}
-            requests.post('http://localhost:5000/catan-spectator/instruction_text', json.dumps({'ok': '1231235'}), headers)
+            requests.put(url='http://localhost:5000/catan-spectator/instruction_text', json=str(output))
+            # requests.put('http://localhost:5000/catan-spectator/instruction_text', json=jsonify({'ok': output}))
+            # requests.put(url='http://localhost:5000/catan-spectator/instruction_text', json=json.dumps({'ok': '1231235'}))
+            # requests.put(url='http://localhost:5000/catan-spectator/instruction_text', json='asd')
 
 
 # -----------------------------------
@@ -67,6 +76,8 @@ def catan_spectator_listener(stream_reader):
 # -----------------------------------
 
 app = Flask(__name__)
+
+things = []
 
 
 @app.route('/catan-spectator/instruction_text', methods=['GET', 'POST', 'PUT'])
@@ -76,21 +87,28 @@ def process_catan_spectator_instruction():
     # if request.method in ['POST', 'PUT']:  #this block is only entered when the form is submitted
     #     return 'Submitted form.'
 
+    a = request.get_json()
+    # print(request.method)
     print('loggy', file=sys.stderr)
-    print(request.method)
-    print(request.get_json())
+    print(a)
+    print('endloggy')
+
+    app.logger.debug("JSON received...")
+    app.logger.debug(request.get_json())
 
     if request.method in ['PUT', 'POST']:
-        return jsonify(request.get_json())
+        things.append(a)
+        return 'Added instruction: {}'.format(a)
     else:
-        headers = {"content-type": "application/json"}
-        return jsonify(request.get_json())
-        # return jsonify({'ok':'ok2'})
+        # print(request.get_json)
+        # return jsonify({'okssss':'ok2'})
+        return str(things)
 
 
 @app.route('/stats', methods=['GET'])
 def stats1():
     # TODO: calculate stats from game state
+    print('STATS')
     return jsonify({'stats': 'mystats'})
 
 
