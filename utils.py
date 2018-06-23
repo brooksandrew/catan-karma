@@ -239,9 +239,9 @@ class Game(Player, Rolls):
         self.settlements = []
         self.settlements_resources = []
 
-    def add_player(self, player):
-        (k, v), = player.items()
-        self.players[k] = v
+    def add_players(self, players):
+        for k, v in players.items():
+            self.players[k] = v
 
     def add_roll(self, roll):
         """
