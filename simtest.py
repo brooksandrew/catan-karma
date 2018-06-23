@@ -1,4 +1,4 @@
-from utils import Player, Rolls, Game, roll_dice, checkSimulatedQuantiles
+from utils import Player, Rolls, Game, roll_dice, check_simulated_quantiles
 import random
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ import scipy
 ###############################################################
 
 # simulate a bunch of rolls
-ngames = 10000
+ngames = 500
 nrolls_max = 50
 agg = []
 cdf_method = 'exact' # 'pb', 'gaussian', 'exact' or 'binomial'
@@ -69,13 +69,13 @@ df = pd.DataFrame(agg)
 df.quantile(np.arange(0, 1, 0.05))
 
 # check accuracy numerically:
-checkSimulatedQuantiles(agg)
+check_simulated_quantiles(agg)
 
 # check uniformity with KS test:
 # TODO: figure out why this blows up at ~980-1000 obs.. p-value becomes jumps to insignificant
 scipy.stats.kstest(agg, 'uniform')
 
-# summaries
+# summaries from last game
 print(gsim.players['simp1'].resources_count())
 print(gsim.players['simp1'].expected_resources_count())
 print(gsim.players['simp1'].get_performance_summary())

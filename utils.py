@@ -7,6 +7,7 @@ from poibin.poibin import PoiBin
 import collections
 import itertools
 
+
 def convert_roll_to_prob(roll):
     """Calculate probability of each roll"""
     if 2 <= roll <= 7 :
@@ -25,7 +26,7 @@ def roll_dice(n_rolls, n_dice=2):
     return [roll_once(n_dice) for _ in range(n_rolls)]
 
 
-def checkSimulatedQuantiles(quantiles, step=0.01):
+def check_simulated_quantiles(quantiles, step=0.01):
     """ Check how uniform the sampled quantiles are"""
     df = pd.DataFrame(quantiles)
     qindex = np.arange(0, 1, step)
@@ -102,6 +103,7 @@ class Player(Rolls):
         return sum(list(zip(*self.settlements_resources))[0])
 
     def resources_at_percentile(self, percentile):
+        """Does not take into consideration clumpiness of cities that return 2 or 0 resources, not just 1"""
         return sum(scipy.stats.binom.ppf(percentile,
                                          n=list(list(zip(*self.settlements_prob()))[0]),
                                          p=list(list(zip(*self.settlements_prob()))[1])
@@ -162,7 +164,6 @@ class Player(Rolls):
         expected = self.expected_resources_count()
         return scipy.stats.norm.cdf(resources, loc=expected, scale=k*(expected**0.5))
 
-
     def get_percentile_from_resources_exact(self, resources=None):
         """
         Use exact CDF creation to calculate percentile given resources
@@ -182,19 +183,33 @@ class Player(Rolls):
         pmf[0] = 1
         turns = len(self.get_roll_history())
 
+        # list[2tuple].  First tuple element is range with settlement.  Second tuple element is number on settlement
         settprob = [(range(turns-i[0], turns), i[1]) for i in self.settlements]
         settprob.sort(key=lambda tup: tup[1])
+
+        # list[2tuple]. First tuple element is dice roll.  Second tuple element is list w ranges of turns w settlement
         aggsett_range = [(key, list(v for v, k in group)) for key, group in itertools.groupby(settprob, key=lambda x: x[1])]
+
+        # list[2tuple]. First tuple element is dice roll.  Second tuple element is Counter w key for turn # and value
+        # for num of settlements at that turn
         aggsett = list(map(lambda x: (x[0], collections.Counter(list(itertools.chain(*x[1])))), aggsett_range))
-        list(map(lambda x: (x[0], x[1][4]), aggsett))
 
         for i in range(turns):
+            print(pmf[0:10])
+            # print(np.cumsum(pmf)[0:10])
+            print('')
+
+            # list[2tuple].  First element is prob of roll number.  Second is # of settlements on number at turn i
             isett = list(map(lambda x: (convert_roll_to_prob(x[0]), x[1][i]), aggsett))
             isett.sort(key=lambda tup: tup[1])
-            isettagg = [(key, sum(v for v, k in group)) for key, group in itertools.groupby(isett, key=lambda x: x[1])]
-            isettagg.append((0, 1 - sum([x[1] for x in isettagg])))
-            pmf = sum([np.roll(pmf, j[0])*j[1] for j in isettagg])
 
+            # list[2tuple].  First element is # of resources for turn i.  Second element is combined probability
+            isettagg = [(key, sum(v for v, k in group)) for key, group in itertools.groupby(isett, key=lambda x: x[1])]
+
+            # Adding 0 with leftover probability
+            isettagg.append((0, 1 - sum([x[1] for x in isettagg])))
+
+            pmf = sum([np.roll(pmf, j[0])*j[1] for j in isettagg])
         return np.cumsum(pmf)[resources]
 
 
@@ -215,7 +230,7 @@ class Game(Player, Rolls):
     TODO: need to connect the functions in Rolls to actually modify player.settlements
     """
 
-    def __init__(self, players):
+    def __init__(self, players={}):
         """
         players: dict of named players
         """
@@ -223,6 +238,10 @@ class Game(Player, Rolls):
         self.rolls = []
         self.settlements = []
         self.settlements_resources = []
+
+    def add_player(self, player):
+        (k, v), = player.items()
+        self.players[k] = v
 
     def add_roll(self, roll):
         """

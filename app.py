@@ -11,11 +11,38 @@ curl -H 'Content-Type: application/json' -X POST -d '{"foo":"more_foo"}' http://
 
 import subprocess
 import os, time, sys, json
+import re
 import requests
 from datetime import datetime
 from flask import Flask, jsonify, request
 from threading import Thread
 from queue import Queue, Empty
+from parse import parse
+
+from utils import Player, Rolls, Game, roll_dice, check_simulated_quantiles
+
+# --------------------------------
+# Templates
+# --------------------------------
+
+template_addplayer = "b'name:{name} color:{color}, seat:{seat}"
+template_addsettlement = "b'{color} buys settlement, builds at ({coord}){:.}"
+template_moverobber = "b'{color} moves robber to {tile_id},{:.}"
+template_roll = "b'{color} rolls {roll}{:.}'"
+
+
+def match_template(x):
+    templates = {
+        'add_player': template_addplayer,
+        'add_settlement': template_addsettlement,
+        'move_robber': template_moverobber,
+        'roll': template_roll
+    }
+    for k, template in templates.items():
+        result = parse(template, x)
+        if result:
+            return k, result.named
+
 
 
 class NonBlockingStreamReader:
@@ -35,7 +62,6 @@ class NonBlockingStreamReader:
 
             while True:
                 line = stream.readline()
-                # print(str(line), 'hah')
                 if line:
                     queue.put(line)
                 else:
@@ -84,24 +110,29 @@ things = []
 def process_catan_spectator_instruction():
     # TODO: modify game state:  add_settlement, roll
 
-    # if request.method in ['POST', 'PUT']:  #this block is only entered when the form is submitted
-    #     return 'Submitted form.'
-
     a = request.get_json()
-    # print(request.method)
+    g = Game()
+    rolls = Rolls()
+
     print('loggy', file=sys.stderr)
     print(a)
     print('endloggy')
+    print(g.players)
 
     app.logger.debug("JSON received...")
     app.logger.debug(request.get_json())
 
     if request.method in ['PUT', 'POST']:
         things.append(a)
+        print(a)
+        matched_instruction = match_template(a)
+        print(matched_instruction)
+
+        if matched_instruction is 'add_settlement':
+            print('ok')
+
         return 'Added instruction: {}'.format(a)
     else:
-        # print(request.get_json)
-        # return jsonify({'okssss':'ok2'})
         return str(things)
 
 
@@ -114,11 +145,20 @@ def stats1():
 
 if __name__ == '__main__':
 
+    # simrolls = Rolls()
+
+    #
+    # gsim.players['simp1'].add_settlements([5, 3, 11])
+    # gsim.players['simp1'].add_settlements([5, 3, 11])
+    # gsim.players['simp1'].add_settlements([5, 3, 11])
+
+
     # settlements don't stick in UI when shell=False
     p = subprocess.Popen(['catan-spectator', '--use_stdout'], stdout=subprocess.PIPE, shell=False)
     nbsr = NonBlockingStreamReader(p.stdout)
 
     b = Thread(name='catan_spectator_listener', target=catan_spectator_listener, kwargs={'stream_reader': nbsr})
     b.start()
-    app.run(debug=True)
+
+    app.run(debug=None)
 
