@@ -11,16 +11,16 @@ curl -H 'Content-Type: application/json' -X POST -d '{"foo":"more_foo"}' http://
 
 import subprocess
 import sys
+from collections import defaultdict
+from queue import Queue, Empty
+from threading import Thread
+
 import hexgrid
 import requests
-from collections import defaultdict
-from datetime import datetime
 from flask import Flask, jsonify, request
-from threading import Thread
-from queue import Queue, Empty
 from parse import parse
 
-from utils import Player, Rolls, Game, roll_dice, check_simulated_quantiles
+from catankarma.utils import Player, Rolls, Game
 
 # --------------------------------
 # Templates
@@ -169,16 +169,45 @@ def process_catan_spectator_instruction():
         return str(things)
 
 
+@app.route('/stats/resources_collected', methods=['GET'])
+def stats_resource_collected():
+    player_color = request.args.get('player')
+    if player_color:
+        return jsonify({player_color: g.players[player_color].resources_count()})
+    else:
+        return jsonify({p: g.players[p].resources_count() for p in g.players})  # TODO: not updating from 0
+
+
+@app.route('/stats/resources_expected', methods=['GET'])
+def stats_resources_expected():
+    player_color = request.args.get('player')
+    if player_color:
+        return jsonify({player_color: g.players[player_color].expected_resources_count()})
+    else:
+        return jsonify({p: g.players[p].expected_resources_count() for p in g.players})
+
+
 @app.route('/stats', methods=['GET'])
-def stats1():
-    # TODO: calculate stats from game state
-    return jsonify({'stats': 'mystats'})
+def stats_percentile():
+    player_color = request.args.get('player')
+    if player_color:
+        return jsonify({player_color: g.players[player_color].get_percentile_from_resources_exact()})
+    else:
+        return jsonify({p: g.players[p].get_percentile_from_resources_exact() for p in g.players})
 
 
 @app.route('/game/players', methods=['GET'])
 def game_players():
     """Not essential to stats, but exposes the players endpoint.  Useful for testing"""
     return jsonify({'players': list(g.players.keys())})
+
+
+@app.route('/game/player_attributes', methods=['GET'])
+def game_player_attrs():
+    """Not essential to stats, but exposes the players endpoint.  Useful for testing"""
+    player_color = request.args.get('player')
+    attr = request.args.get('attr')
+    return jsonify({player_color: getattr(g.players[player_color], attr)})
 
 
 @app.route('/game/settlements', methods=['GET'])
@@ -194,7 +223,7 @@ def game_rolls():
     return jsonify({'rolls': rolls.get_roll_history()})
 
 
-if __name__ == '__main__':
+def main():
 
     p = subprocess.Popen(['catan-spectator', '--use_stdout'], stdout=subprocess.PIPE, shell=False)
     nbsr = NonBlockingStreamReader(p.stdout)
@@ -203,4 +232,10 @@ if __name__ == '__main__':
     b.start()
 
     app.run(debug=None)
+
+
+if __name__ == '__main__':
+    main()
+
+
 

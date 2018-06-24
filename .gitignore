@@ -1,0 +1,6 @@
+dontcommit
+__pycache__
+log/
+.idea
+.vcs
+catankarma.egg-info/

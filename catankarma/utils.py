@@ -1,11 +1,13 @@
-import scipy.stats
-import pandas as pd
-import random
-import numpy as np
-from bisect import bisect
-from poibin.poibin import PoiBin
 import collections
 import itertools
+import random
+from bisect import bisect
+
+import numpy as np
+import pandas as pd
+import scipy.stats
+
+from catankarma.poibin.poibin import PoiBin
 
 
 def convert_roll_to_prob(roll):
